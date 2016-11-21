@@ -13,9 +13,9 @@
 #endif
 
 #ifdef DEBUG
-#define debug(msg, ...) printf(msg, __VA_ARGS__)
+#define debug if(1)
 #else
-#define debug(msg, ...) printf("");
+#define debug if(0)
 #endif
 
 #endif  /*ATTRIB_H*/
