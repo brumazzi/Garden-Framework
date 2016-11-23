@@ -10,7 +10,11 @@
 #define GRD_SEND_ERROR	1
 #define GRD_SEND_SUCESS	0
 
+#include <web-header.h>
+
 int grd_recv(int fd_sock, char **recvd);
 int grd_send(int fd_sock, void *data, int data_type);
+
+int grd_callback_send(http_header *hh, const char *content);
 
 #endif  /*SOCK-IO_H*/
