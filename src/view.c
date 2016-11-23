@@ -27,8 +27,7 @@ void grd_views_close(void *lib_view){
 int grd_view_open(void *lib_view, const char *url, const char *header, int fd_client){
 	void (*view)(int cli_recv, int (*resp)(int, void *, int));
 
-	view = dlsym(lib_view, "index");
-	/*if(!strcmp(url, "/"))
+	if(!strcmp(url, "/"))
 		view = dlsym(lib_view, "index");
 	else{
 		int x = 0;
@@ -38,7 +37,7 @@ int grd_view_open(void *lib_view, const char *url, const char *header, int fd_cl
 			if(buff[x] == '/')
 				buff[x] = '_';
 		view = dlsym(lib_view, buff);
-	}*/
+	}
 
 	if(!view){
 		fprintf(stderr, "Invalid url: %s", url);
