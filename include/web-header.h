@@ -11,6 +11,7 @@
 #define CONTENT_PLAIN		"text/plain"
 #define CONTENT_APP_STREAM	"application/octet-stream"
 #define CONTENT_PDF		"application/pdf"
+#define CONTENT_FORM		"application/x-www-form-urlencode"
 #define CONTENT_ACCEPT_ALL	"*/*"
 
 enum http_method{
@@ -30,11 +31,16 @@ typedef struct{
 	enum http_method method;
 	short http_version;
 	char uri[PATH_MAX];
+	short header_len;
+	short form_len;
 	http_data *h_receive;
 	http_data *h_form;
 	int fd;
 }http_header;
 
 int grd_header_parser(http_header *hh, const char *s_header);
+const char *grd_header_propert(http_header *hh, const char *prop);
+const char **grd_form_list_vars(http_header *hh);
+const char *grd_form_value(http_header *hh, const char *var);
 
 #endif  /*WEB_HEADER_H*/

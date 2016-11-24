@@ -74,7 +74,7 @@ int grd_recv(int fd_sock, char **recvd){
 	char c;
 	int k13 = 0;
 	while(k13 < 4){
-		if(read(fd_sock, &c, 1) != 1){
+		if(recv(fd_sock, &c, 1, 0) != 1){
 			perror("Receive error: error to receive packages");
 			return GRD_RECV_ERROR;
 		}
@@ -97,8 +97,10 @@ int grd_recv(int fd_sock, char **recvd){
 
 int grd_recv_len(int fd_sock, char **recvd, size_t len){
 	(*recvd) = grd_alloc(len);
-	if(read(fd_sock, (*recvd), len) != len){
+	size_t r;
+	if((r = recv(fd_sock, (*recvd), len, 0)) < 0){
 		perror("Receive error: error to receive packages");
+		printf("*%i*\n",r);
 		return GRD_RECV_ERROR;
 	}
 
@@ -107,7 +109,7 @@ int grd_recv_len(int fd_sock, char **recvd, size_t len){
 
 int grd_send(int fd_sock, void *data, int data_type){
 	if(data_type == GRD_DATA_TYPE_TEXT)
-		write(fd_sock, (const char *) data, strlen((const char *)data));
+		send(fd_sock, (const char *) data, strlen((const char *)data), 0);
 	else if(data_type == GRD_DATA_TYPE_FILE)
 		sendfile(fd_sock, (int) data, NULL, 4000);
 	else
@@ -141,8 +143,8 @@ int grd_callback_send(http_header *hh, const char *content){
 			strlen(content),
 			"text/html"
 			);
-	grd_send(hh->fd, header, 1);
-	grd_send(hh->fd, content, 1);
+	grd_send(hh->fd, (void*) header, 1);
+	grd_send(hh->fd, (void*) content, 1);
 
 	return 0;
 }
