@@ -5,8 +5,8 @@
 #define GRD_VIEW_OPEN_ERROR	1
 #define GRD_VIEW_OPEN_SUCESS	0
 
-void *grd_views_load(const char *lib_view);
-void grd_views_close(void *lib_view);
-int grd_view_open(void *lib_view, const char *url, const char *header, int fd_client);
+#include <web-header.h>
+
+int grd_view_open(http_header *hh);
 
 #endif  /*VIEW_H*/

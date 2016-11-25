@@ -7,44 +7,34 @@
 #include <limits.h>
 #include <sock-io.h>
 #include <mem.h>
+#include <web-header.h>
 
-void *grd_views_load(const char *lib_view){
+int grd_view_open(http_header *hh){
 	char lib_path[PATH_MAX];
 	getcwd(lib_path, PATH_MAX);
-	strcat(lib_path, "/views/");
-	strcat(lib_path, lib_view);
-	strcat(lib_path, ".so");
+	strcat(lib_path, "/views.so");
+	void *lib_view = dlopen(lib_path, RTLD_NOW);
 
-	void *handle = dlopen(lib_path, RTLD_NOW);
+	void (*view)(http_header *hh, int (*resp)(http_header *, const char *));
+	char uri[PATH_MAX];
 
-	return handle;
-}
-
-void grd_views_close(void *lib_view){
-	dlclose(lib_view);
-}
-
-int grd_view_open(void *lib_view, const char *url, const char *header, int fd_client){
-	void (*view)(int cli_recv, int (*resp)(int, void *, int));
-
-	if(!strcmp(url, "/"))
-		view = dlsym(lib_view, "index");
-	else{
-		int x = 0;
-		char *buff = grd_alloc(strlen(url));
-		strcpy(buff, url);
-		while(buff[x])
-			if(buff[x] == '/')
-				buff[x] = '_';
-		view = dlsym(lib_view, buff);
+	sscanf(hh->uri,"%[^?]", uri);
+	
+	int x = 0;
+	for(x=0; x<strlen(uri); x++){
+		if(uri[x] == '/')
+			uri[x] = '_';
 	}
+	view = dlsym(lib_view, uri);
 
 	if(!view){
-		fprintf(stderr, "Invalid url: %s", url);
+		fprintf(stderr, "Invalid url: %[^?]", hh->uri);
 		return GRD_VIEW_OPEN_ERROR;
 	}
 
-	view(fd_client, grd_send);
+	view(hh, grd_callback_send);
+
+	dlclose(lib_view);
 
 	return GRD_VIEW_OPEN_SUCESS;
 }

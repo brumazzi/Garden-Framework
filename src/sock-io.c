@@ -38,7 +38,7 @@ const char *month_name[] = {
 };
 
 const char *h_skull_OK = "HTTP/1.1 200 OK\r\n"
-"Date: %s, %d %s %d:%d:%d GMT\r\n"
+"Date: %s, %d %s %d %d:%d:%d GMT\r\n"
 "Server: Garden\r\n"
 "Accept-Ranges: bytes\r\n"
 //"Last-Modified: \r\n"
@@ -49,7 +49,7 @@ const char *h_skull_OK = "HTTP/1.1 200 OK\r\n"
 "\r\n";
 
 const char *h_skull_not_found = "HTTP/1.1 404 Not Found\r\n"
-"Date: %s, %d %s %d:%d:%d GMT\r\n"
+"Date: %s, %d %s %d %d:%d:%d GMT\r\n"
 "Server: Apache\r\n"
 "Content-Length: 261\r\n"
 "Connection: Keep-Alive\r\n"
@@ -59,10 +59,10 @@ const char *h_skull_not_found = "HTTP/1.1 404 Not Found\r\n"
 "<html><head>\n"
 "<title>404 Not Found</title>\n"
 "</head><body>\n"
-"<h1>Not Found</h1>\n"
-"<p>The requested URL /icon was not found on this server.</p>\n"
+"<h1>Page Not Found</h1>\n"
+"<p>Can't be find <script>document.write(location.href);</script>!</p>\n"
 "<hr>\n"
-"<address>Apache Server at localhost Port 80</address>\n"
+"<address>Garden Server at localhost Port 8001</address>\n"
 "</body></html>\n";
 
 int grd_recv(int fd_sock, char **recvd){
@@ -132,7 +132,10 @@ int grd_callback_send(http_header *hh, const char *content){
 	time(&now);
 	struct tm *h_time = localtime(&now);
 
-	sprintf(header,content ? h_skull_OK : h_skull_not_found,
+	const char *skull = content ? h_skull_OK : h_skull_not_found;
+
+	if(content)
+		sprintf(header, skull,
 			day_name[h_time->tm_wday],
 			h_time->tm_mday,
 			month_name[h_time->tm_mon],
@@ -143,8 +146,18 @@ int grd_callback_send(http_header *hh, const char *content){
 			strlen(content),
 			"text/html"
 			);
+	else
+		sprintf(header, skull,
+			day_name[h_time->tm_wday],
+			h_time->tm_mday,
+			month_name[h_time->tm_mon],
+			h_time->tm_year,
+			h_time->tm_hour,
+			h_time->tm_min,
+			h_time->tm_sec
+			);
 	grd_send(hh->fd, (void*) header, 1);
-	grd_send(hh->fd, (void*) content, 1);
+	if(content) grd_send(hh->fd, (void*) content, 1);
 
 	return 0;
 }

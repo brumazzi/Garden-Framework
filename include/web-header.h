@@ -38,6 +38,7 @@ typedef struct{
 	int fd;
 }http_header;
 
+void grd_header_init(http_header *hh, int fd);
 int grd_header_parser(http_header *hh, const char *s_header);
 const char *grd_header_propert(http_header *hh, const char *prop);
 const char **grd_form_list_vars(http_header *hh);

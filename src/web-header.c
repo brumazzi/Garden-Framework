@@ -6,6 +6,11 @@
 #include <mem.h>
 #include <attrib.h>
 
+void grd_header_init(http_header *hh, int fd){
+	bzero(hh, sizeof(http_header));
+	hh->fd = fd;
+}
+
 int grd_header_parser(http_header *hh, const char *s_header){
 	unsigned int cur = 0;
 	char buff[PATH_MAX];
@@ -106,7 +111,6 @@ int grd_header_parser(http_header *hh, const char *s_header){
 					
 				sscanf(buff, "%512[^=]=%[^&]", hh->h_form[x].field, hh->h_form[x].value);
 				cur += strlen(buff)+1;
-				printf("*%s: %s\n",hh->h_form[x].field, hh->h_form[x].value);
 			}
 			cur++;
 		}

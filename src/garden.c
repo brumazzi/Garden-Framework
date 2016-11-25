@@ -3,71 +3,163 @@
 #include <stdio.h>
 #include <attrib.h>
 #include <view.h>
+#include <signal.h>
+#include <limits.h>
+#include <unistd.h>
+#include <pthread.h>
+#include <stdio.h>
+#include <string.h>
 
-#ifdef DEBUG
-const char *header = "GET /?id=16&name=user&sock=1&apptype=89&system=UNIX HTTP/1.1\r\n"
-"Host: 127.0.0.1:8081\r\n"
-"User-Agent: Mozilla/5.0 (X11; Linux x86_64; rv:51.0) Gecko/20100101 Firefox/51.0\r\n"
-"Accept: text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8\r\n"
-"Accept-Language: pt-BR,pt;q=0.8,en-US;q=0.5,en;q=0.3\r\n"
-"Accept-Encoding: gzip, deflate\r\n"
-"DNT: 1\r\n"
-"Connection: keep-alive\r\n"
-"Upgrade-Insecure-Requests: 1\r\n\r\n";
-#endif
+struct _propertis{
+	unsigned int port;
+	short max_threads;
+	char sync : 2;
+};
 
-int main(int argc, char **argv){
-	debug{
-		/*
-		 * this code up the server, send and receive a message,
-		 * run on debug mode to test the framework.
-		 */
-		int port = 8001;
-		int fd_server = grd_server(port);
-		//void *view = grd_views_load("app");
-		char *data = 0;
+struct _data_conf{
+	pthread_t pt;
+	char sync : 2;
+	int fd;
+	pthread_mutex_t *mt;
+};
 
-		printf("Garden connect in port %i\n", port);
+int sig_fault(int sig);
+int sig_term(int sig);
+int sig_int(int sig);
+void *t_callback(void *data);
 
-		int fd_client = grd_accept(fd_server);
-		grd_recv(fd_client, &data);
-		data[strlen(data)-4] = 0;
-		
-		http_header hh;
-		hh.fd = fd_client;
-		
-		grd_header_parser(&hh, data);
-		for(int x=0; x<hh.header_len; x++){
-			printf("%s: %s\n", hh.h_receive[x].field, hh.h_receive[x].value);
-		}
+const char *_usage = ""
+"Usage: garden <propert> [value] ...\n"
+"Run garden web server\n"
+"\n"
+"Example:\n"
+"	garden -server -port 8000\n"
+"\n"
+" -port		<port_number>	set connection port.\n"
+" -threads	<num_threads>	set max threads to client connect.\n"
+" -sync				define synchronize threads.\n"
+" -create	<application>	create application firectory.\n"
+"\n";
 
-		for(int x=0; x</*hh.form_len*/3; x++){
-			printf("%d %s: %s\n",x, hh.h_form[x].field, hh.h_form[x].value);
-		}
-		/*int res = grd_view_open(view, data, "header", fd_client);
-		printf("%s\n", res?"sucess":"page not found");
+int main(int argc, const char **argv){
+	/* signals configurations */
+	signal(SIGSEGV, sig_fault);
+	signal(SIGTERM, sig_term);
+	signal(SIGINT, sig_int);
 
-		grd_views_close(view);*/
-		grd_close(fd_client);
-		grd_close(fd_server);
+	if(argc < 2){
+		printf(_usage);
 
-		//printf("%s\n", data);
-		/*http_header hh;
-		grd_header_parser(&hh, header);
-		for(int x=0; x<hh.header_len; x++){
-			printf("%s: %s\n", hh.h_receive[x].field, hh.h_receive[x].value);
-		}
-
-		printf("method: %d\n", hh.method);
-		printf("\n%s\n\n",hh.uri);
-
-		for(int x=0; x<hh.form_len; x++){
-			printf("%s: %s\n", hh.h_form[x].field, hh.h_form[x].value);
-		}
-		puts("###############################");
-		puts(grd_form_value(&hh, "system"));
-		puts(grd_header_propert(&hh, "Host"));*/
+		return 2;
 	}
 
+	/* default config */
+	struct _propertis pr;
+	pr.port = 8001;
+	pr.max_threads = 1;
+	pr.sync = 0;
+
+	/* get application path */
+	char path[PATH_MAX];
+	getcwd(path, PATH_MAX);
+
+	/* check argvs */
+	for(int x=1; x<argc; x++){
+		if(!strcmp(argv[x], "-port")){ /* define port value */
+			pr.port = atoi(argv[++x]);
+			if(!pr.port){
+				fprintf(stderr, "Invalid port %s\n", argv[x-1]);
+				return 1;
+			}
+			continue;
+		}if(!strcmp(argv[x], "-threads")){ /* set max threads to use */
+			pr.max_threads = atoi(argv[++x]);
+			if(pr.max_threads < 1){
+				fprintf(stderr, "Invalid threads value \"%s\"\n", argv[x-1]);
+				return 1;
+			}
+			continue;
+		}if(!strcmp(argv[x], "-sync")){ /* active synchronized threads */
+			pr.sync = 1;
+			continue;
+		}if(!strcmp(argv[x], "-create")){ /* create application folder - no necessary */
+			char app_name[PATH_MAX];
+
+			strcpy(app_name, path);
+			strcat(app_name, argv[++x]);
+			mkdir(app_name, 0755);
+			return 0;
+		}
+	}
+
+	pthread_t t_line[pr.max_threads];
+	pthread_mutex_t t_sync;
+
+	for(int x=0; x<pr.max_threads; x++){
+		t_line[x] = 0;
+	}
+	
+	int server = grd_server(pr.port);
+
+	if(pr.sync)
+		pthread_mutex_init(&t_sync, NULL);
+
+	while(1){
+		for(int x=0; x<pr.max_threads; x++){
+			usleep(500000);
+			if(t_line[x] == 0){
+				int client = grd_accept(server);
+				if(client == -1){
+					perror("Error");
+					continue;
+				}
+				struct _data_conf *conf = grd_alloc(sizeof(struct _data_conf));
+				conf->pt = &t_line[x];
+				conf->sync = pr.sync;
+				conf->fd = client;
+				conf->mt = &t_sync;
+
+				pthread_create(&t_line[x], NULL, t_callback, (void *) conf);
+				pthread_join(&t_line[x], NULL);
+			}
+		}
+	}
+
+	pthread_mutex_destroy(&t_sync);
+		
 	return 0;
+}
+
+void *t_callback(void *data){
+	struct _data_conf *conf = (struct _data_conf*) data;
+	if(conf->sync)
+		pthread_mutex_lock(conf->mt);
+
+	/* TODO */
+
+	if(conf->sync)
+		pthread_mutex_unlock(conf->mt);
+
+	return NULL;
+}
+
+int sig_fault(int sig){
+	fprintf(stderr, "Error: Segment fault\n");
+	exit(sig);
+
+	return sig;
+}
+
+int sig_term(int sig){
+	/*fprintf(stderr, "Closing application\n");
+	exit(sig);*/
+
+	return sig;
+}
+
+int sig_int(int sig){
+	fprintf(stderr, "Closing application\n");
+	exit(sig);
+
+	return sig;
 }
