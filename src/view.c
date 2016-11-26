@@ -22,7 +22,7 @@ int grd_view_open(http_header *hh){
 	
 	int x = 0;
 	x = strlen(uri);
-	if(uri[x-1] == '/')
+	if(x > 1 && uri[x-1] == '/')
 		uri[x-1] = '\0';
 	for(x=0; x<strlen(uri); x++){
 		if(uri[x] == '/' || uri[x] == '.')
@@ -31,7 +31,7 @@ int grd_view_open(http_header *hh){
 	view = dlsym(lib_view, uri);
 
 	if(!view){
-		fprintf(stderr, "Invalid url: %[^?]", hh->uri);
+		fprintf(stderr, "Invalid url: %s\n", hh->uri);
 		return GRD_VIEW_OPEN_ERROR;
 	}
 
