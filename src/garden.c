@@ -9,6 +9,10 @@
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
+#include <mem.h>
+#include <stdlib.h>
+#include <sys/stat.h>
+#include <sys/types.h>
 
 struct _propertis{
 	unsigned int port;
@@ -17,15 +21,15 @@ struct _propertis{
 };
 
 struct _data_conf{
-	pthread_t pt;
+	pthread_t *pt;
 	char sync : 2;
 	int fd;
 	pthread_mutex_t *mt;
 };
 
-int sig_fault(int sig);
-int sig_term(int sig);
-int sig_int(int sig);
+void sig_fault(int sig);
+void sig_term(int sig);
+void sig_int(int sig);
 void *t_callback(void *data);
 
 const char *_usage = ""
@@ -35,11 +39,14 @@ const char *_usage = ""
 "Example:\n"
 "	garden -server -port 8000\n"
 "\n"
+" -server			start application server.\n"
 " -port		<port_number>	set connection port.\n"
 " -threads	<num_threads>	set max threads to client connect.\n"
 " -sync				define synchronize threads.\n"
 " -create	<application>	create application firectory.\n"
-"\n";
+"";
+
+int fd_server;
 
 int main(int argc, const char **argv){
 	/* signals configurations */
@@ -48,7 +55,7 @@ int main(int argc, const char **argv){
 	signal(SIGINT, sig_int);
 
 	if(argc < 2){
-		printf(_usage);
+		puts(_usage);
 
 		return 2;
 	}
@@ -63,6 +70,7 @@ int main(int argc, const char **argv){
 	char path[PATH_MAX];
 	getcwd(path, PATH_MAX);
 
+	char serv_up = 0;
 	/* check argvs */
 	for(int x=1; x<argc; x++){
 		if(!strcmp(argv[x], "-port")){ /* define port value */
@@ -89,43 +97,65 @@ int main(int argc, const char **argv){
 			strcat(app_name, argv[++x]);
 			mkdir(app_name, 0755);
 			return 0;
+		}if(!strcmp(argv[x], "-server")){
+			serv_up = 1;
+			continue;
 		}
+
+		fprintf(stderr, "Invalid argument: %s\n", argv[x]);
 	}
 
-	pthread_t t_line[pr.max_threads];
+	if(!serv_up){
+		fprintf(stderr, "Use \"-server\" to run garden server\n");
+		return 4;
+	}
+
+	//pthread_t t_line[pr.max_threads];
 	pthread_mutex_t t_sync;
 
-	for(int x=0; x<pr.max_threads; x++){
+	/*for(int x=0; x<pr.max_threads; x++){
 		t_line[x] = 0;
-	}
+	}*/
 	
 	int server = grd_server(pr.port);
+	fd_server = server;
+	if(server < 0){
+		perror("Error");
+		return 3;
+	}
+
+	fprintf(stderr, "garden as runing in port %i\n", pr.port);
 
 	if(pr.sync)
 		pthread_mutex_init(&t_sync, NULL);
 
+	struct _data_conf *conf;
+#ifndef DEBUG
 	while(1){
 		for(int x=0; x<pr.max_threads; x++){
-			usleep(500000);
-			if(t_line[x] == 0){
+			//if(t_line[x] == 0){
+				pthread_t t_line;
 				int client = grd_accept(server);
-				if(client == -1){
+				if(client < 0){
 					perror("Error");
 					continue;
 				}
-				struct _data_conf *conf = grd_alloc(sizeof(struct _data_conf));
-				conf->pt = &t_line[x];
+				conf = grd_alloc(sizeof(struct _data_conf));
 				conf->sync = pr.sync;
 				conf->fd = client;
 				conf->mt = &t_sync;
+				//conf->pt = &t_line[x];
 
-				pthread_create(&t_line[x], NULL, t_callback, (void *) conf);
-				pthread_join(&t_line[x], NULL);
-			}
+				pthread_create(&t_line, NULL, t_callback, (void *) conf);
+				pthread_join(t_line, NULL);
+			//}
 		}
 	}
+#endif
+	if(pr.sync)
+		pthread_mutex_destroy(&t_sync);
 
-	pthread_mutex_destroy(&t_sync);
+	grd_close(server);
 		
 	return 0;
 }
@@ -135,31 +165,45 @@ void *t_callback(void *data){
 	if(conf->sync)
 		pthread_mutex_lock(conf->mt);
 
-	/* TODO */
+	char *header = NULL;
+	grd_recv(conf->fd, &header);
+
+	if(header){
+		http_header hh;
+		grd_header_init(&hh, conf->fd);
+
+		grd_header_parser(&hh, header);
+
+		grd_view_open(&hh);
+
+		grd_header_destroy(&hh);
+		grd_free(header);
+	}else{
+		perror("Error");
+	}
 
 	if(conf->sync)
 		pthread_mutex_unlock(conf->mt);
 
+	//(*conf->pt) = 0;
+	grd_close(conf->fd);
+
+	grd_free(data);
 	return NULL;
 }
 
-int sig_fault(int sig){
+void sig_fault(int sig){
 	fprintf(stderr, "Error: Segment fault\n");
 	exit(sig);
-
-	return sig;
 }
 
-int sig_term(int sig){
-	/*fprintf(stderr, "Closing application\n");
-	exit(sig);*/
-
-	return sig;
-}
-
-int sig_int(int sig){
+void sig_term(int sig){
 	fprintf(stderr, "Closing application\n");
 	exit(sig);
+}
 
-	return sig;
+void sig_int(int sig){
+	fprintf(stderr, "Closing application\n");
+	grd_close(fd_server);
+	exit(sig);
 }

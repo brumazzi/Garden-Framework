@@ -15,14 +15,14 @@ int grd_view_open(http_header *hh){
 	strcat(lib_path, "/views.so");
 	void *lib_view = dlopen(lib_path, RTLD_NOW);
 
-	void (*view)(http_header *hh, int (*resp)(http_header *, const char *));
+	void (*view)(const http_header *hh, int (*resp)(const http_header *, const char *));
 	char uri[PATH_MAX];
 
 	sscanf(hh->uri,"%[^?]", uri);
 	
 	int x = 0;
 	for(x=0; x<strlen(uri); x++){
-		if(uri[x] == '/')
+		if(uri[x] == '/' || uri[x] == '.')
 			uri[x] = '_';
 	}
 	view = dlsym(lib_view, uri);

@@ -7,6 +7,8 @@
 #	define HTTP_MAX_HEADER_SIZE (80*1024)
 #endif
 
+#define set_response(resp) int (*resp)(const http_header *, const char *)
+
 #define CONTENT_HTML		"text/html"
 #define CONTENT_PLAIN		"text/plain"
 #define CONTENT_APP_STREAM	"application/octet-stream"
@@ -40,6 +42,7 @@ typedef struct{
 
 void grd_header_init(http_header *hh, int fd);
 int grd_header_parser(http_header *hh, const char *s_header);
+void grd_header_destroy();
 const char *grd_header_propert(http_header *hh, const char *prop);
 const char **grd_form_list_vars(http_header *hh);
 const char *grd_form_value(http_header *hh, const char *var);

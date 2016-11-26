@@ -17,6 +17,6 @@ int grd_recv(int fd_sock, char **recvd);
 int grd_recv_len(int fd_sock, char **recvd, size_t len);
 int grd_send(int fd_sock, void *data, int data_type);
 
-int grd_callback_send(http_header *hh, const char *content);
+int grd_callback_send(const http_header *hh, const char *content);
 
 #endif  /*SOCK-IO_H*/

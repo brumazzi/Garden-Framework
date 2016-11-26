@@ -5,10 +5,27 @@
 #include <string.h>
 #include <mem.h>
 #include <attrib.h>
+#include <stdlib.h>
 
 void grd_header_init(http_header *hh, int fd){
 	bzero(hh, sizeof(http_header));
 	hh->fd = fd;
+}
+
+void grd_header_destroy(http_header *hh){
+	int x = (int) hh->header_len;
+	if(x){
+		while((x)--)
+			grd_free(hh->h_receive[x].value);
+		grd_free(hh->h_receive);
+	}
+
+	x = (int) hh->form_len;
+	if(x){
+		while((x)--)
+			grd_free(hh->h_form[x].value);
+		grd_free(hh->h_form);
+	}
 }
 
 int grd_header_parser(http_header *hh, const char *s_header){
@@ -43,6 +60,7 @@ int grd_header_parser(http_header *hh, const char *s_header){
 			max_header++;
 	}
 	hh->header_len = max_header;
+	hh->form_len = 0;
 	
 	hh->h_receive = grd_alloc(max_header);
 	for(int x=0; x<max_header; x++){
@@ -85,7 +103,7 @@ int grd_header_parser(http_header *hh, const char *s_header){
 		}
 	}else if(hh->method == POST){
 		char *form;
-		char *cont_len = grd_header_propert(hh, "Content-Length");
+		const char *cont_len = grd_header_propert(hh, "Content-Length");
 
 		size_t len;
 		len = atoi(cont_len);
@@ -143,5 +161,5 @@ const char **grd_form_list_vars(http_header *hh){
 		res[x] = hh->h_form[x].field;
 	}
 
-	return (const char *)res;
+	return (const char **)res;
 }

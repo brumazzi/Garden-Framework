@@ -100,7 +100,6 @@ int grd_recv_len(int fd_sock, char **recvd, size_t len){
 	size_t r;
 	if((r = recv(fd_sock, (*recvd), len, 0)) < 0){
 		perror("Receive error: error to receive packages");
-		printf("*%i*\n",r);
 		return GRD_RECV_ERROR;
 	}
 
@@ -125,7 +124,7 @@ void finalize sock_io_end(void){
 	fclose(tmp);
 }
 
-int grd_callback_send(http_header *hh, const char *content){
+int grd_callback_send(const http_header *hh, const char *content){
 	char header[HTTP_MAX_HEADER_SIZE];
 	time_t now;
 
