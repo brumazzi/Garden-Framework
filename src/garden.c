@@ -110,12 +110,12 @@ int main(int argc, const char **argv){
 		return 4;
 	}
 
-	//pthread_t t_line[pr.max_threads];
+	pthread_t t_line[pr.max_threads];
 	pthread_mutex_t t_sync;
 
-	/*for(int x=0; x<pr.max_threads; x++){
+	for(int x=0; x<pr.max_threads; x++){
 		t_line[x] = 0;
-	}*/
+	}
 	
 	int server = grd_server(pr.port);
 	fd_server = server;
@@ -130,25 +130,25 @@ int main(int argc, const char **argv){
 		pthread_mutex_init(&t_sync, NULL);
 
 	struct _data_conf *conf;
+	char *header = 0;
 #ifndef DEBUG
 	while(1){
 		for(int x=0; x<pr.max_threads; x++){
-			//if(t_line[x] == 0){
-				pthread_t t_line;
+			if(t_line[x] == 0){
 				int client = grd_accept(server);
 				if(client < 0){
 					perror("Error");
 					continue;
 				}
 				conf = grd_alloc(sizeof(struct _data_conf));
+				conf->pt = &t_line[x];
 				conf->sync = pr.sync;
 				conf->fd = client;
 				conf->mt = &t_sync;
-				//conf->pt = &t_line[x];
 
-				pthread_create(&t_line, NULL, t_callback, (void *) conf);
-				pthread_join(t_line, NULL);
-			//}
+				pthread_create(&t_line[x], NULL, t_callback, (void *) conf);
+				pthread_join(t_line[x], NULL);
+			}
 		}
 	}
 #endif
@@ -166,7 +166,7 @@ void *t_callback(void *data){
 		pthread_mutex_lock(conf->mt);
 
 	char *header = NULL;
-	grd_recv(conf->fd, &header);
+	grd_recv_len(conf->fd, &header, HTTP_MAX_HEADER_SIZE);
 
 	if(header){
 		http_header hh;
@@ -185,7 +185,7 @@ void *t_callback(void *data){
 	if(conf->sync)
 		pthread_mutex_unlock(conf->mt);
 
-	//(*conf->pt) = 0;
+	(*conf->pt) = 0;
 	grd_close(conf->fd);
 
 	grd_free(data);

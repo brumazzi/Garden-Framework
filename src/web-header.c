@@ -74,42 +74,38 @@ int grd_header_parser(http_header *hh, const char *s_header){
 		cur += buff_len+2;
 	}
 
-	if(hh->method == GET){
-		cur = 0;
-		while(hh->uri[cur]){
-			if(hh->uri[cur] == '?'){
-				cur++;
-				int vars = 1;
-				int inc = 0;
-				while(hh->uri[cur+inc]){
-					if(hh->uri[cur+inc] == '&')
-						vars++;
-					inc++;
-				}
-				hh->form_len = vars;
-				hh->h_form = grd_alloc(vars);
-				for(int x=0; x<vars; x++){
-					sscanf((const char *)hh->uri+cur,
-							"%[^&]", buff);
-					size_t fv_len = strlen(buff);
-					hh->h_form[x].value = grd_alloc(fv_len);
-					
-					sscanf(buff, "%512[^=]=%[^&]", hh->h_form[x].field, hh->h_form[x].value);
-					cur += strlen(buff)+1;
-				}
-				
+	int fcur = 0;
+	while(hh->uri[fcur]){
+		if(hh->uri[fcur] == '?'){
+			fcur++;
+			int vars = 1;
+			int inc = 0;
+			while(hh->uri[fcur+inc]){
+				if(hh->uri[fcur+inc] == '&')
+					vars++;
+				inc++;
 			}
-			cur++;
+			hh->form_len = vars;
+			hh->h_form = grd_alloc(vars);
+			for(int x=0; x<vars; x++){
+				sscanf((const char *)hh->uri+fcur,
+						"%[^&]", buff);
+				size_t fv_len = strlen(buff);
+				hh->h_form[x].value = grd_alloc(fv_len);
+
+				sscanf(buff, "%512[^=]=%[^&]", hh->h_form[x].field, hh->h_form[x].value);
+				cur += strlen(buff)+1;
+			}
 		}
-	}else if(hh->method == POST){
-		char *form;
+		fcur++;
+	}
+	if(hh->method != GET){
 		const char *cont_len = grd_header_propert(hh, "Content-Length");
-
 		size_t len;
-		len = atoi(cont_len);
-
-		grd_recv_len(hh->fd, &form, len);
+		len = atoi(cont_len)+1;
 		
+		char *form = s_header+cur-len;
+
 		cur = 0;
 		while(form[cur]){
 			int vars = 1;
