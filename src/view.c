@@ -21,6 +21,9 @@ int grd_view_open(http_header *hh){
 	sscanf(hh->uri,"%[^?]", uri);
 	
 	int x = 0;
+	x = strlen(uri);
+	if(uri[x-1] == '/')
+		uri[x-1] = '\0';
 	for(x=0; x<strlen(uri); x++){
 		if(uri[x] == '/' || uri[x] == '.')
 			uri[x] = '_';
