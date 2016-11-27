@@ -1,0 +1,51 @@
+#!/bin/bash
+
+function mkf(){
+	echo "$1" >> Makefile
+}
+
+function mkf_l(){
+	printf "$1" >> Makefile
+}
+
+rm -rf Makefile
+
+mkf 'CC=gcc'
+mkf 'CLIBS= -ldl -lpthread -O2 -Wall'
+mkf 'INCLUDE=-I ./include'
+mkf 'SRC=./src'
+mkf 'MAIN=garden.c'
+mkf 'OUTPUT=garden'
+
+mkf ''
+mkf 'all: test'
+mkf ''
+
+mkf_l 'test:'
+mkf_l ' ${OUTPUT}'
+for src_f in src/*.c; do
+	mkf_l " ${src_f%.c}.o"
+done
+mkf
+mkf
+
+mkf_l '${OUTPUT}:'
+for src_f in src/*.c; do
+	mkf_l " ${src_f%.c}.o"
+done
+for src_f in include/*.h; do
+	mkf_l " ${src_f}"
+done
+mkf
+mkf "	\${CC} \${INCLUDE} \${CLIBS} \${SRC}/*.o -o \${OUTPUT}"
+
+for src_f in src/*.c; do
+	mkf '' &&
+	mkf "${src_f%.c}.o: $src_f" &&
+	mkf "	\${CC} \${INCLUDE} \${CLIBS} $src_f -c -o ${src_f%.c}.o"
+done
+
+mkf
+mkf 'clean:'
+mkf '	rm -rf ${SRC}/*.o'
+
