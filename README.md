@@ -8,6 +8,7 @@ Download Garden-Framework using:
     cd garden
     ./configure
     make
+    sudo make install
 
 ## Usage
 
