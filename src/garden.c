@@ -1,3 +1,17 @@
+/*
+ *
+ * 	Name: Garden
+ * 	Full Name: Garden-Framework
+ * 	Version: 0.1.0
+ * 	Description:
+ * 		garden framework is a framework developed in C,
+ * 		and use C libraries to create routes by yours
+ * 		methods.
+ *	Author:	Daniel B. Brumazzi
+ *	E-mail:	brumazzi_daniel@yahoo.com.br
+ *
+ */
+
 #include <connect.h>
 #include <sock-io.h>
 #include <stdio.h>
@@ -13,6 +27,8 @@
 #include <stdlib.h>
 #include <sys/stat.h>
 #include <sys/types.h>
+
+#define SYS_VERSION	"v0.1.0"
 
 struct _propertis{
 	unsigned int port;
@@ -44,6 +60,7 @@ const char *_usage = ""
 " -threads	<num_threads>	set max threads to client connect.\n"
 " -sync				define synchronize threads.\n"
 " -create	<application>	create application firectory.\n"
+" -version			show version"
 "";
 
 int fd_server;
@@ -100,6 +117,8 @@ int main(int argc, const char **argv){
 		}if(!strcmp(argv[x], "-server")){
 			serv_up = 1;
 			continue;
+		}if(!strcmp(argv[x], "-version")){
+			puts(SYS_VERSION);
 		}
 
 		fprintf(stderr, "Invalid argument: %s\n", argv[x]);
