@@ -6,7 +6,8 @@ Download Garden-Framework using:
 
     git clone https://github.com/brumazzi/Garden-Framework.git garden
     cd garden
-    gcc -I include -ldl -lpthread src/*.c -O2 -Wall -o garden
+    ./configure
+    make
 
 ## Usage
 
