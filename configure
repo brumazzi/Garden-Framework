@@ -48,4 +48,7 @@ done
 mkf
 mkf 'clean:'
 mkf '	rm -rf ${SRC}/*.o'
-
+mkf
+mkf 'install:'
+mkf '	cp garden /usr/bin'
+mkf '	cp include /usr/include/garden -r'
