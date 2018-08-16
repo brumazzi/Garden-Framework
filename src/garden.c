@@ -59,8 +59,8 @@ const char *_usage = ""
 " -port		<port_number>	set connection port.\n"
 " -threads	<num_threads>	set max threads to client connect.\n"
 " -sync				define synchronize threads.\n"
-" -create	<application>	create application firectory.\n"
-" -version			show version"
+" -create	<application>	create application directory.\n"
+" -version			show version\n"
 "";
 
 int fd_server;
